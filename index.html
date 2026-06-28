@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>International Campus of Science and Technology — Learning Management System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        forest: { 50:'#f7ebe9', 100:'#eed7d3', 200:'#dfb1ac', 300:'#c2757f', 400:'#9f3b4f', 500:'#8b1f2d', 600:'#6f1723', 700:'#4f1119', 800:'#3b0c14', 900:'#22060a' },
+        gold: { 50:'#fff9e5', 100:'#fff1bf', 200:'#ffe474', 300:'#f4d35e', 400:'#e7c33d', 500:'#d9b21a', 600:'#b18a13', 700:'#8b6910', 800:'#6a4f0d', 900:'#4d3b0a' },
+      }
+    }
+  }
+}
+</script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="antialiased">
+
+<div id="toast-container"></div>
+
+<!-- LOGIN PAGE -->
+<div id="login-page" class="login-bg flex items-center justify-center">
+  <div class="relative z-10 w-full max-w-md px-6">
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-forest-800 border-2 border-gold-500 mb-6 glow-pulse overflow-hidden">
+        <img src="assets/logo.svg" alt="Campus logo" class="w-16 h-16" />
+      </div>
+      <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">International Campus</h1>
+      <p class="text-gold-400 font-medium tracking-widest uppercase text-sm mt-1">of Science & Technology</p>
+      <p class="text-gray-400 mt-3 text-sm">Learning Management System</p>
+    </div>
+    <div class="card p-8" style="cursor:default;">
+      <h2 class="text-xl font-bold mb-6 text-center">Sign In</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">Email</label>
+          <input id="login-email" type="email" class="input-field" placeholder="Enter your email">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">Password</label>
+          <input id="login-password" type="password" class="input-field" placeholder="Enter your password">
+        </div>
+        <div id="login-error" class="text-red-400 text-sm" style="display:none;"></div>
+        <button id="login-btn" class="btn-primary w-full text-center mt-2">Sign In</button>
+      </div>
+      <div class="mt-6 pt-6" style="border-top:1px solid var(--border);">
+        <p class="text-xs mb-3" style="color:var(--fg-muted);">Quick access (demo accounts):</p>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="quick-admin" class="text-xs py-2 px-3 rounded-lg font-medium" style="background:rgba(244,211,103,0.12);color:#f4d35e;">Admin</button>
+          <button id="quick-lecturer" class="text-xs py-2 px-3 rounded-lg font-medium" style="background:rgba(123,33,49,0.15);color:#e5a80e;">Lecturer</button>
+          <button id="quick-student" class="text-xs py-2 px-3 rounded-lg font-medium" style="background:rgba(255,255,255,0.1);color:#f9f5f2;">Student</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-page" class="hidden">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-full flex flex-col z-50 sidebar-desktop" style="background:var(--bg-card);border-right:1px solid var(--border);">
+    <div class="p-5" style="border-bottom:1px solid var(--border);">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-forest-900 flex items-center justify-center border border-gold-500 overflow-hidden">
+          <img src="assets/logo.svg" alt="Campus logo" class="w-6 h-6" />
+        </div>
+        <div>
+          <h3 class="font-bold text-sm">International Campus of Science and Technology</h3>
+          <p class="text-xs" style="color:var(--fg-muted);">Campus LMS</p>
+        </div>
+      </div>
+    </div>
+    <nav id="sidebar-nav" class="flex-1 py-4 overflow-y-auto scrollbar-thin"></nav>
+    <div class="p-4" style="border-top:1px solid var(--border);">
+      <div class="flex items-center gap-3 mb-3">
+        <div id="user-avatar" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"></div>
+        <div class="flex-1 min-w-0">
+          <p id="user-name" class="text-sm font-semibold truncate"></p>
+          <p id="user-role" class="text-xs capitalize" style="color:var(--fg-muted);"></p>
+        </div>
+      </div>
+      <button id="logout-btn" class="btn-secondary w-full text-sm py-2"><i class="fas fa-sign-out-alt mr-2"></i>Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="main-shell min-h-screen">
+    <header class="sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style="background:rgba(12,26,18,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);">
+      <div>
+        <h2 id="page-title" class="text-xl font-bold"></h2>
+        <p id="page-subtitle" class="text-sm" style="color:var(--fg-muted);"></p>
+      </div>
+      <div id="current-date" class="text-sm" style="color:var(--fg-muted);"></div>
+    </header>
+    <div id="main-content" class="p-8"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal-container"></div>
+
+<script>
+  window.LMS_SUPABASE_CONFIG = {
+    url: 'https://kuqrcapruapvdaxlzqah.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1cXJjYXBydWFwdmRheGx6cWFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MjQyNTgsImV4cCI6MjA5ODIwMDI1OH0.JiOjk_k9EtfJBKd4D4D2vijcnceCY3OZ7o4ENHh9FXk'
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
