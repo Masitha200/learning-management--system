@@ -49,6 +49,24 @@ var supabaseClient = null;
 var supabaseEnabled = false;
 var supabaseReady = false;
 
+function updateNextIds() {
+  if (DB.users && DB.users.length) {
+    DB.nextId.users = Math.max.apply(Math, DB.users.map(function (u) { return u.id || 0; })) + 1;
+  }
+  if (DB.courses && DB.courses.length) {
+    DB.nextId.courses = Math.max.apply(Math, DB.courses.map(function (c) { return c.id || 0; })) + 1;
+  }
+  if (DB.assignments && DB.assignments.length) {
+    DB.nextId.assignments = Math.max.apply(Math, DB.assignments.map(function (a) { return a.id || 0; })) + 1;
+  }
+  if (DB.submissions && DB.submissions.length) {
+    DB.nextId.submissions = Math.max.apply(Math, DB.submissions.map(function (s) { return s.id || 0; })) + 1;
+  }
+  if (DB.materials && DB.materials.length) {
+    DB.nextId.materials = Math.max.apply(Math, DB.materials.map(function (m) { return m.id || 0; })) + 1;
+  }
+}
+
 function loadPersistedUsers() {
   try {
     var storedUsers = localStorage.getItem('lms-users');
@@ -56,6 +74,7 @@ function loadPersistedUsers() {
       var parsed = JSON.parse(storedUsers);
       if (Array.isArray(parsed) && parsed.length) {
         DB.users = parsed.map(normalizeUser);
+        updateNextIds();
       }
     }
   } catch (e) {
@@ -119,12 +138,23 @@ function normalizeUser(row) {
   var isSeeded = row.email && seededEmails.indexOf(row.email.toLowerCase()) !== -1;
 
   var localApproved = false;
+  var localIndex = '';
   try {
     var approvals = localStorage.getItem('lms-approved-emails');
     if (approvals) {
       var arr = JSON.parse(approvals);
       if (Array.isArray(arr) && row.email && arr.indexOf(row.email.toLowerCase()) !== -1) {
         localApproved = true;
+      }
+    }
+    var indices = localStorage.getItem('lms-registered-indices');
+    if (indices) {
+      var idxArr = JSON.parse(indices);
+      if (Array.isArray(idxArr) && row.email) {
+        var foundIdx = idxArr.find(function (item) { return item.email === row.email.toLowerCase(); });
+        if (foundIdx) {
+          localIndex = foundIdx.index;
+        }
       }
     }
   } catch (e) { }
@@ -139,7 +169,7 @@ function normalizeUser(row) {
     avatar: row.avatar || (row.name || '').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(),
     profilePic: row.profilePic || row.profile_pic || null,
     isApproved: (isSeeded || row.role === 'admin') ? true : (row.is_approved === true || row.is_approved === 1 || row.isApproved === true || localApproved),
-    indexNumber: row.index_number || row.indexNumber || ''
+    indexNumber: row.index_number || row.indexNumber || localIndex || ''
   };
 }
 
@@ -308,11 +338,7 @@ async function initializeSupabase() {
       console.warn('Departments table on Supabase is not ready yet:', err);
     }
 
-    if (DB.users.length) DB.nextId.users = Math.max.apply(Math, DB.users.map(function (u) { return u.id; })) + 1;
-    if (DB.courses.length) DB.nextId.courses = Math.max.apply(Math, DB.courses.map(function (c) { return c.id; })) + 1;
-    if (DB.assignments.length) DB.nextId.assignments = Math.max.apply(Math, DB.assignments.map(function (a) { return a.id; })) + 1;
-    if (DB.submissions.length) DB.nextId.submissions = Math.max.apply(Math, DB.submissions.map(function (s) { return s.id; })) + 1;
-    if (DB.materials.length) DB.nextId.materials = Math.max.apply(Math, DB.materials.map(function (m) { return m.id; })) + 1;
+    updateNextIds();
 
     localStorage.setItem('lms-seeded-v2', 'true');
     supabaseReady = true;
@@ -748,6 +774,19 @@ async function handleRegister() {
     index_number: indexNum
   };
 
+  // Persist index number locally in override registry
+  if (role === 'student' && indexNum) {
+    try {
+      var indicesArr = [];
+      var stored = localStorage.getItem('lms-registered-indices');
+      if (stored) indicesArr = JSON.parse(stored);
+      indicesArr.push({ email: email.toLowerCase(), index: indexNum });
+      localStorage.setItem('lms-registered-indices', JSON.stringify(indicesArr));
+    } catch (e) {
+      console.warn('Could not store index override', e);
+    }
+  }
+
   if (supabaseEnabled && supabaseClient) {
     try {
       var { error } = await supabaseClient.from('users').insert({
@@ -762,17 +801,19 @@ async function handleRegister() {
         index_number: indexNum
       });
       if (error) {
-        console.warn('Reg insert failed, attempting fallback insertion:', error.message);
-        await supabaseClient.from('users').insert({
+        console.warn('Reg insert failed, attempting legacy fallback insertion:', error.message);
+        var fb = await supabaseClient.from('users').insert({
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
           department: newUser.department,
-          avatar: newUser.avatar,
-          is_approved: false
+          avatar: newUser.avatar
         });
+        if (fb.error) {
+          console.error('All Supabase insertions failed:', fb.error.message);
+        }
       }
     } catch (err) {
       console.warn('Supabase registration failed, falling back:', err);
@@ -781,6 +822,7 @@ async function handleRegister() {
 
   DB.users.push(normalizeUser(newUser));
   saveUsersToStorage();
+  updateNextIds();
 
   showToast('Registration submitted! Awaiting admin approval.', 'success');
 
@@ -800,6 +842,10 @@ async function handleRegister() {
 
 function loginAs(user) {
   currentUser = user;
+  try {
+    localStorage.setItem('lms-current-session', user.email);
+  } catch (e) { }
+
   document.getElementById('login-page').style.display = 'none';
   document.getElementById('login-page').classList.add('hidden');
   document.getElementById('app-page').style.display = 'flex';
@@ -814,6 +860,10 @@ function loginAs(user) {
 
 function handleLogout() {
   currentUser = null;
+  try {
+    localStorage.removeItem('lms-current-session');
+  } catch (e) { }
+
   document.getElementById('app-page').style.display = 'none';
   document.getElementById('app-page').classList.add('hidden');
   document.getElementById('login-page').style.display = 'flex';
@@ -1290,6 +1340,8 @@ async function saveUser() {
   } catch (e) { }
 
   DB.users.push(normalizeUser(user));
+  saveUsersToStorage();
+  updateNextIds();
   if (supabaseEnabled && supabaseClient) {
     try { await syncUserToSupabase(user); } catch (err) { console.warn('Unable to sync user to Supabase', err); }
   }
@@ -1353,6 +1405,7 @@ async function saveEditUser() {
       console.warn('Unable to sync edited user to Supabase', err);
     }
   }
+  saveUsersToStorage();
   closeModal(); showToast('User updated successfully'); renderPage();
 }
 
@@ -1380,6 +1433,8 @@ async function doDeleteUser(id) {
       console.warn('Unable to delete user and sync courses to Supabase', err);
     }
   }
+  saveUsersToStorage();
+  updateNextIds();
   closeModal(); showToast('User deleted'); renderPage();
 }
 
@@ -2424,8 +2479,24 @@ function renderMyGrades() {
   return html;
 }
 
+function restoreSession() {
+  try {
+    var cachedEmail = localStorage.getItem('lms-current-session');
+    if (cachedEmail) {
+      var matchedUser = DB.users.find(function (u) { return u.email.toLowerCase() === cachedEmail.toLowerCase(); });
+      if (matchedUser && matchedUser.isApproved !== false) {
+        loginAs(matchedUser);
+      } else {
+        localStorage.removeItem('lms-current-session');
+      }
+    }
+  } catch (e) { }
+}
+
 // ===== EVENT BINDINGS =====
-initializeSupabase();
+initializeSupabase().then(function () {
+  restoreSession();
+});
 
 document.getElementById('login-btn').addEventListener('click', handleLogin);
 document.getElementById('logout-btn').addEventListener('click', handleLogout);
