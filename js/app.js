@@ -675,7 +675,7 @@ function escAttr(s) {
 async function authenticateWithSupabase(email, password) {
   if (!supabaseEnabled || !supabaseClient) return null;
   try {
-    var { data, error } = await supabaseClient.from('users').select('*').eq('email', email).limit(1);
+    var { data, error } = await supabaseClient.from('users').select('*').eq('email', email.toLowerCase()).limit(1);
     if (error) throw error;
     if (!data || !data.length) return null;
     var row = data[0];
@@ -688,7 +688,7 @@ async function authenticateWithSupabase(email, password) {
 
 // ===== AUTH =====
 async function handleLogin() {
-  var email = document.getElementById('login-email').value.trim();
+  var email = document.getElementById('login-email').value.trim().toLowerCase();
   var password = document.getElementById('login-password').value.trim();
   var errEl = document.getElementById('login-error');
   if (!email || !password) {
@@ -703,7 +703,7 @@ async function handleLogin() {
   }
 
   if (!user) {
-    user = DB.users.find(function (u) { return u.email === email && u.password === password; });
+    user = DB.users.find(function (u) { return (u.email || '').toLowerCase() === email && u.password === password; });
   }
 
   if (!user) {
@@ -724,7 +724,7 @@ async function handleLogin() {
 
 async function handleRegister() {
   var name = document.getElementById('register-name').value.trim();
-  var email = document.getElementById('register-email').value.trim();
+  var email = document.getElementById('register-email').value.trim().toLowerCase();
   var password = document.getElementById('register-password').value.trim();
   var dept = document.getElementById('register-dept').value.trim();
   var role = document.getElementById('register-role').value;
