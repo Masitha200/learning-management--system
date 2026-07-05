@@ -2174,6 +2174,47 @@ function downloadMaterial(id) {
   showToast('Downloading ' + m.fileName);
 }
 
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  var k = 1024;
+  var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  var i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+window.handleMaterialFileSelect = function (input) {
+  var file = input.files[0];
+  if (!file) return;
+
+  var titleEl = document.getElementById('mm-title');
+  if (titleEl && !titleEl.value.trim()) {
+    var baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+    titleEl.value = baseName;
+  }
+
+  var typeEl = document.getElementById('mm-type');
+  if (typeEl) {
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') {
+      typeEl.value = 'pdf';
+    } else if (['mp4', 'webm', 'mov', 'avi', 'mkv'].indexOf(ext) !== -1) {
+      typeEl.value = 'video';
+    } else if (['ppt', 'pptx', 'odp'].indexOf(ext) !== -1) {
+      typeEl.value = 'ppt';
+    } else if (['zip', 'rar', 'tar', '7z', 'gz'].indexOf(ext) !== -1) {
+      typeEl.value = 'zip';
+    } else {
+      typeEl.value = 'doc';
+    }
+  }
+
+  var labelEl = document.getElementById('mm-file-label');
+  if (labelEl) {
+    var sizeStr = formatBytes(file.size);
+    labelEl.innerHTML = '<span class="text-accent font-semibold">' + escAttr(file.name) + '</span> (' + sizeStr + ')';
+  }
+};
+
 function openAddMaterialModal() {
   var courses = currentUser.role === 'lecturer'
     ? DB.courses.filter(function (c) { return c.lecturerId === currentUser.id; })
@@ -2185,11 +2226,16 @@ function openAddMaterialModal() {
     body += '<option value="' + c.id + '">' + c.code + ' — ' + escAttr(c.name) + '</option>';
   });
   body += '</select></div>' +
+    '<div><label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">Select File</label>' +
+    '<input type="file" id="mm-file" class="hidden" onchange="handleMaterialFileSelect(this)">' +
+    '<div onclick="document.getElementById(\'mm-file\').click()" class="border border-dashed rounded-xl p-6 text-center cursor-pointer hover:border-accent transition" style="border-color:rgba(255,255,255,0.15); background:rgba(255,255,255,0.01);">' +
+    '<i class="fas fa-cloud-upload-alt text-3xl mb-2 text-accent"></i>' +
+    '<p class="text-sm font-medium text-white" id="mm-file-label">Click to select file from computer</p>' +
+    '<p class="text-xs mt-1" style="color:var(--fg-muted);">Supports PDF, Video, Zip, PPT, Docs</p>' +
+    '</div></div>' +
     '<div><label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">Title</label><input id="mm-title" class="input-field" placeholder="Material title"></div>' +
     '<div><label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">Type</label>' +
     '<select id="mm-type" class="input-field"><option value="pdf">PDF</option><option value="video">Video</option><option value="doc">Document</option><option value="ppt">Presentation</option><option value="zip">Archive (ZIP)</option></select></div>' +
-    '<div><label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">File Name</label><input id="mm-filename" class="input-field" placeholder="e.g. lecture_notes.pdf"></div>' +
-    '<div><label class="block text-sm font-medium mb-1" style="color:var(--fg-muted);">File Size</label><input id="mm-size" class="input-field" placeholder="e.g. 2.5 MB"></div>' +
     '</div>';
   var footer = '<button class="btn-secondary text-sm" onclick="closeModal()">Cancel</button>' +
     '<button data-action="save-material" class="btn-primary text-sm">Upload</button>';
@@ -2200,15 +2246,40 @@ async function saveMaterial() {
   var courseId = parseInt(document.getElementById('mm-course').value);
   var title = document.getElementById('mm-title').value.trim();
   var type = document.getElementById('mm-type').value;
-  var fileName = document.getElementById('mm-filename').value.trim() || (title.toLowerCase().replace(/\s+/g, '_') + '.' + type);
-  var size = document.getElementById('mm-size').value.trim() || '1 MB';
-  if (!courseId || !title) { showToast('Course and title are required', 'error'); return; }
-  var material = { id: DB.nextId.materials++, courseId: courseId, title: title, type: type, fileName: fileName, uploadedBy: currentUser.id, uploadedAt: new Date().toISOString().split('T')[0], size: size };
+
+  var fileInput = document.getElementById('mm-file');
+  var file = fileInput ? fileInput.files[0] : null;
+
+  if (!courseId) { showToast('Please select a course', 'error'); return; }
+  if (!file && !title) { showToast('Please select a file or enter a title', 'error'); return; }
+
+  var size = '1 MB';
+  var fileName = title ? (title.toLowerCase().replace(/\s+/g, '_') + '.' + type) : 'file';
+
+  if (file) {
+    size = formatBytes(file.size);
+    fileName = file.name;
+    if (!title) {
+      title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+    }
+  }
+
+  var material = {
+    id: DB.nextId.materials++,
+    courseId: courseId,
+    title: title,
+    type: type,
+    fileName: fileName,
+    uploadedBy: currentUser.id,
+    uploadedAt: new Date().toISOString().split('T')[0],
+    size: size
+  };
+
   DB.materials.push(material);
   if (supabaseEnabled && supabaseClient) {
     try { await syncMaterialToSupabase(material); } catch (err) { console.warn('Unable to sync material to Supabase', err); }
   }
-  closeModal(); showToast('Material uploaded'); renderPage();
+  closeModal(); showToast('Material uploaded successfully'); renderPage();
 }
 
 function confirmDeleteMaterial(id) {
