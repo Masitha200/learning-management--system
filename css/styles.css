@@ -30,6 +30,11 @@
   display: none !important;
 }
 
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Outfit', sans-serif;
   background-color: #04010a;
@@ -99,6 +104,8 @@ h4 {
 #app-page {
   min-height: 100vh;
   display: flex;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .main-shell {
@@ -107,6 +114,8 @@ h4 {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
 }
 
 #main-content {
@@ -235,13 +244,13 @@ h4 {
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.02);
   box-shadow: 0 8px 25px rgba(255, 0, 127, 0.45);
-  filter: brightness(1.1);
+  filter: brightness(1.15);
 }
 
 .btn-primary:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.97);
 }
 
 .btn-secondary {
@@ -260,7 +269,12 @@ h4 {
   border-color: rgba(255, 64, 129, 0.5);
   color: #fff;
   background: rgba(255, 64, 129, 0.1);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(255, 64, 129, 0.2);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .btn-danger {
@@ -278,12 +292,15 @@ h4 {
 }
 
 .btn-danger:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.02);
   box-shadow: 0 8px 25px rgba(255, 71, 87, 0.45);
-  filter: brightness(1.1);
+  filter: brightness(1.15);
 }
 
-/* Inputs & Form Fields */
+.btn-danger:active {
+  transform: translateY(1px) scale(0.97);
+}
+
 .input-field {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
@@ -291,7 +308,7 @@ h4 {
   padding: 11px 16px;
   color: var(--fg);
   width: 100%;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: all 0.25s ease-in-out;
   outline: none;
   font-family: inherit;
   font-size: 14px;
@@ -299,8 +316,9 @@ h4 {
 
 .input-field:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.25);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.35);
   background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1.5px);
 }
 
 .input-field::placeholder {
@@ -463,8 +481,16 @@ tr:last-child td {
   border-bottom: none;
 }
 
+tr {
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
 tr:hover td {
-  background: rgba(0, 242, 254, 0.04);
+  background: rgba(0, 242, 254, 0.03) !important;
+}
+
+tr:hover {
+  transform: translateX(4px);
 }
 
 /* Dynamic Entrance Animations & Glowing */
@@ -658,4 +684,22 @@ tr:hover td {
   #main-content {
     padding: 2.5rem 3rem;
   }
+}
+
+/* Stat card icon animations on hover */
+.stat-icon-wrapper {
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stat-card-container:hover .stat-icon-wrapper {
+  transform: scale(1.12) rotate(8deg);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.stat-icon {
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stat-card-container:hover .stat-icon {
+  transform: scale(1.08);
 }

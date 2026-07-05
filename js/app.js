@@ -1065,9 +1065,9 @@ async function approveUser(id) {
 
 // ===== STAT CARD =====
 function statCard(icon, iconBg, iconColor, value, label) {
-  return '<div class="card p-6"><div class="flex items-center gap-4">' +
-    '<div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background:' + iconBg + ';">' +
-    '<i class="fas ' + icon + ' text-lg" style="color:' + iconColor + ';"></i></div>' +
+  return '<div class="card p-6 stat-card-container"><div class="flex items-center gap-4">' +
+    '<div class="w-12 h-12 rounded-xl flex items-center justify-center stat-icon-wrapper" style="background:' + iconBg + ';">' +
+    '<i class="fas ' + icon + ' text-lg stat-icon" style="color:' + iconColor + ';"></i></div>' +
     '<div><p class="text-2xl font-bold">' + value + '</p>' +
     '<p class="text-sm" style="color:var(--fg-muted);">' + label + '</p></div></div></div>';
 }
@@ -1166,10 +1166,10 @@ function renderStudentDashboard() {
 
   var html = '';
   if (currentUser.indexNumber) {
-    html += '<div class="mb-6 p-4 rounded-xl flex items-center justify-between" style="background:rgba(255,255,255,0.02);border:1px solid var(--border);">' +
+    html += '<div class="mb-6 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--border);">' +
       '<div><span class="text-xs uppercase tracking-wider block mb-1" style="color:var(--fg-muted);">Student Identification</span>' +
       '<span class="text-lg font-bold text-accent font-mono"><i class="fas fa-id-card mr-2"></i>' + escAttr(currentUser.indexNumber) + '</span></div>' +
-      '<div class="text-right"><span class="text-xs uppercase tracking-wider block mb-1" style="color:var(--fg-muted);">Department</span>' +
+      '<div class="text-left sm:text-right"><span class="text-xs uppercase tracking-wider block mb-1" style="color:var(--fg-muted);">Department</span>' +
       '<span class="text-sm font-semibold">' + escAttr(currentUser.department || 'Not Assigned') + '</span></div>' +
       '</div>';
   }
