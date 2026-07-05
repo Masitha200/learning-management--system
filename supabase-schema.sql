@@ -5,8 +5,11 @@ create table if not exists users (
   password text not null,
   role text not null,
   department text,
-  avatar text
+  avatar text,
+  is_approved boolean default true,
+  index_number text
 );
+
 
 create table if not exists courses (
   id integer primary key,
@@ -50,3 +53,40 @@ create table if not exists materials (
   uploaded_at text,
   size text
 );
+
+alter table users disable row level security;
+alter table courses disable row level security;
+alter table assignments disable row level security;
+alter table submissions disable row level security;
+alter table materials disable row level security;
+
+-- In case RLS cannot be disabled on some Supabase tiers/configs, we also add "allow all" public policies:
+drop policy if exists "Allow public access" on users;
+create policy "Allow public access" on users for all using (true) with check (true);
+
+drop policy if exists "Allow public access" on courses;
+create policy "Allow public access" on courses for all using (true) with check (true);
+
+drop policy if exists "Allow public access" on assignments;
+create policy "Allow public access" on assignments for all using (true) with check (true);
+
+drop policy if exists "Allow public access" on submissions;
+create policy "Allow public access" on submissions for all using (true) with check (true);
+
+drop policy if exists "Allow public access" on materials;
+create policy "Allow public access" on materials for all using (true) with check (true);
+
+
+-- Departments management table
+create table if not exists departments (
+  id serial primary key,
+  name text not null unique
+);
+
+alter table departments disable row level security;
+drop policy if exists "Allow public access" on departments;
+create policy "Allow public access" on departments for all using (true) with check (true);
+
+-- Migration steps for existing databases:
+alter table users add column if not exists is_approved boolean default true;
+alter table users add column if not exists index_number text;
