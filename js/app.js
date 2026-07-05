@@ -124,6 +124,17 @@ function isSupabaseConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL.indexOf('YOUR_') === -1 && SUPABASE_ANON_KEY.indexOf('YOUR_') === -1);
 }
 
+function buildPasswordPayload(user) {
+  var pw = user.password || '';
+  // Clean any existing flags first
+  pw = pw.replace('::approved', '');
+  var idxPos = pw.indexOf('::idx::');
+  if (idxPos !== -1) {
+    pw = pw.substring(0, idxPos);
+  }
+  return pw + (user.isApproved !== false ? '::approved' : '') + (user.indexNumber ? '::idx::' + user.indexNumber : '');
+}
+
 function normalizeUser(row) {
   var seededEmails = [
     'admin@meridian.edu',
@@ -136,6 +147,21 @@ function normalizeUser(row) {
     'nina.k@meridian.edu'
   ];
   var isSeeded = row.email && seededEmails.indexOf(row.email.toLowerCase()) !== -1;
+
+  var rawPw = row.password || '';
+  var isApprovedFromPw = false;
+  var indexFromPw = '';
+
+  if (rawPw.indexOf('::approved') !== -1) {
+    isApprovedFromPw = true;
+    rawPw = rawPw.replace('::approved', '');
+  }
+  var idxToken = '::idx::';
+  var idxPos = rawPw.indexOf(idxToken);
+  if (idxPos !== -1) {
+    indexFromPw = rawPw.substring(idxPos + idxToken.length);
+    rawPw = rawPw.substring(0, idxPos);
+  }
 
   var localApproved = false;
   var localIndex = '';
@@ -163,13 +189,13 @@ function normalizeUser(row) {
     id: row.id,
     name: row.name,
     email: row.email,
-    password: row.password,
+    password: rawPw,
     role: row.role,
     department: row.department || '',
     avatar: row.avatar || (row.name || '').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(),
     profilePic: row.profilePic || row.profile_pic || null,
-    isApproved: (isSeeded || row.role === 'admin') ? true : (row.is_approved === true || row.is_approved === 1 || row.isApproved === true || localApproved),
-    indexNumber: row.index_number || row.indexNumber || localIndex || ''
+    isApproved: (isSeeded || row.role === 'admin') ? true : (row.is_approved === true || row.is_approved === 1 || row.isApproved === true || localApproved || isApprovedFromPw),
+    indexNumber: row.index_number || row.indexNumber || localIndex || indexFromPw || ''
   };
 }
 
@@ -355,11 +381,12 @@ async function initializeSupabase() {
 async function syncUserToSupabase(user) {
   if (!supabaseEnabled || !supabaseClient) return;
   try {
+    var pwPayload = buildPasswordPayload(user);
     var { error } = await supabaseClient.from('users').insert({
       id: user.id,
       name: user.name,
       email: user.email,
-      password: user.password,
+      password: pwPayload,
       role: user.role,
       department: user.department,
       avatar: user.avatar,
@@ -372,7 +399,7 @@ async function syncUserToSupabase(user) {
         id: user.id,
         name: user.name,
         email: user.email,
-        password: user.password,
+        password: pwPayload,
         role: user.role,
         department: user.department,
         avatar: user.avatar,
@@ -1100,9 +1127,16 @@ async function approveUser(id) {
 
   if (supabaseEnabled && supabaseClient) {
     try {
-      var { error } = await supabaseClient.from('users').update({ is_approved: true }).eq('id', id);
+      var pwPayload = buildPasswordPayload(u);
+      var { error } = await supabaseClient.from('users').update({
+        is_approved: true,
+        password: pwPayload
+      }).eq('id', id);
       if (error) {
-        console.warn('Supabase update failed, attempting fallback query:', error.message);
+        console.warn('Supabase update failed, attempting legacy fallback query:', error.message);
+        await supabaseClient.from('users').update({
+          password: pwPayload
+        }).eq('id', id);
       }
     } catch (err) {
       console.warn('Could not sync approval to Supabase:', err);
